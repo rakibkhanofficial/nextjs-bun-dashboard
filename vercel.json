@@ -1,0 +1,15 @@
+{
+  "version": 2,
+  "buildCommand": "prisma generate && prisma db push && next build",
+  "installCommand": "bun install",
+  "framework": "nextjs",
+  "outputDirectory": ".next",
+  "functions": {
+    "pages/api/**/*": {
+      "maxDuration": 30
+    }
+  },
+  "env": {
+    "PRISMA_SCHEMA_DISABLE_ADVISORY_LOCK": "1"
+  }
+}

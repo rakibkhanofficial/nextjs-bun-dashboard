@@ -8,6 +8,8 @@
     "start": "next start",
     "postinstall": "prisma generate",
     "lint": "next lint",
+    "prisma:push": "prisma db push",
+    "prisma:studio": "prisma studio",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {

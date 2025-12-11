@@ -3,9 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"  // Changed from sqlite
+  provider = "sqlite"
   url      = env("DATABASE_URL")
-  relationMode = "prisma"  // Important for Prisma Data Platform
 }
 
 model User {
@@ -44,12 +43,12 @@ model Account {
   type              String
   provider          String
   providerAccountId String
-  refresh_token     String?  @db.Text  // Use Text for PostgreSQL
-  access_token      String?  @db.Text
+  refresh_token     String?
+  access_token      String?
   expires_at        Int?
   token_type        String?
   scope             String?
-  id_token          String?  @db.Text
+  id_token          String?
   session_state     String?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -81,15 +80,15 @@ model VerificationToken {
 model Post {
   id          String    @id @default(cuid())
   title       String
-  content     String?   @db.Text  // Use Text for longer content
-  excerpt     String?   @db.Text
+  content     String?
+  excerpt     String?
   slug        String    @unique
   author      User      @relation(fields: [authorId], references: [id])
   authorId    String
   status      String    @default("draft") // draft, published, archived
   featured    Boolean   @default(false)
   category    String?
-  tags        String[]  // Changed to array for PostgreSQL
+  tags        String    // Store as comma-separated string for SQLite
   views       Int       @default(0)
   likes       Int       @default(0)
   publishedAt DateTime?
@@ -102,14 +101,14 @@ model Post {
 model Page {
   id          String    @id @default(cuid())
   title       String
-  content     String?   @db.Text
+  content     String?
   slug        String    @unique
   status      String    @default("draft")
   order       Int       @default(0)
   parentId    String?
   isHome      Boolean   @default(false)
   metaTitle   String?
-  metaDesc    String?   @db.Text
+  metaDesc    String?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   
@@ -143,8 +142,8 @@ model Invoice {
   status      String    @default("pending") // pending, paid, cancelled, overdue
   dueDate     DateTime
   paidDate    DateTime?
-  items       Json?     // Changed to Json type for PostgreSQL
-  notes       String?   @db.Text
+  items       String    // Store as JSON string for SQLite
+  notes       String?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   
@@ -173,7 +172,7 @@ model Subscription {
 model CalendarEvent {
   id          String    @id @default(cuid())
   title       String
-  description String?   @db.Text
+  description String?
   startDate   DateTime
   endDate     DateTime
   allDay      Boolean   @default(false)
@@ -181,8 +180,8 @@ model CalendarEvent {
   color       String    @default("#3b82f6")
   createdBy   User      @relation(fields: [createdById], references: [id])
   createdById String
-  attendees   String[]  // Changed to array for PostgreSQL
-  reminders   Json?     // Changed to Json type for PostgreSQL
+  attendees   String    // Store as comma-separated string for SQLite
+  reminders   String    // Store as JSON string for SQLite
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   
@@ -193,8 +192,8 @@ model CalendarEvent {
 model Role {
   id          String    @id @default(cuid())
   name        String    @unique
-  description String?   @db.Text
-  permissions String[]  // Changed to array for PostgreSQL
+  description String?
+  permissions String    // Store as comma-separated string for SQLite
   users       User[]
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
@@ -205,7 +204,7 @@ model Role {
 model Permission {
   id          String    @id @default(cuid())
   name        String    @unique
-  description String?   @db.Text
+  description String?
   module      String    // users, posts, billing, etc.
   action      String    // create, read, update, delete
   createdAt   DateTime  @default(now())
@@ -235,11 +234,11 @@ model Notification {
   id          String    @id @default(cuid())
   userId      String
   title       String
-  message     String    @db.Text
+  message     String
   type        String    @default("info") // info, success, warning, error
   read        Boolean   @default(false)
   actionUrl   String?
-  metadata    Json?     // Changed to Json type for PostgreSQL
+  metadata    String?   // Store as JSON string for SQLite
   createdAt   DateTime  @default(now())
   readAt      DateTime?
   
@@ -251,10 +250,10 @@ model Notification {
 model Setting {
   id          String    @id @default(cuid())
   key         String    @unique
-  value       String    @db.Text
+  value       String
   type        String    @default("string") // string, number, boolean, json
   category    String    @default("general")
-  description String?   @db.Text
+  description String?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   
@@ -269,10 +268,10 @@ model AuditLog {
   action      String    // created, updated, deleted, logged_in, etc.
   entityType  String    // User, Post, Invoice, etc.
   entityId    String?
-  oldValue    Json?     // Changed to Json type for PostgreSQL
-  newValue    Json?     // Changed to Json type for PostgreSQL
+  oldValue    String?   // Store as JSON string for SQLite
+  newValue    String?   // Store as JSON string for SQLite
   ipAddress   String?
-  userAgent   String?   @db.Text
+  userAgent   String?
   timestamp   DateTime  @default(now())
   
   @@index([userId, action, timestamp])
