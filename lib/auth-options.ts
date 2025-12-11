@@ -4,10 +4,14 @@ import GoogleProvider from "next-auth/providers/google"
 import GitHubProvider from "next-auth/providers/github"
 import { PrismaAdapter } from "@auth/prisma-adapter"
 import bcrypt from "bcryptjs"
+
+// Import PrismaClient directly instead of from lib/db
 import { PrismaClient } from "@prisma/client"
 
+// Create Prisma client instance
 const prisma = new PrismaClient()
 
+// Extend the session type
 declare module "next-auth" {
   interface Session {
     user: {
@@ -34,6 +38,7 @@ export const authOptions: NextAuthOptions = {
           throw new Error("Invalid credentials")
         }
 
+        // Find user in database
         const user = await prisma.user.findUnique({
           where: {
             email: credentials.email
@@ -44,6 +49,7 @@ export const authOptions: NextAuthOptions = {
           throw new Error("Invalid credentials")
         }
 
+        // Check password
         const isCorrectPassword = await bcrypt.compare(
           credentials.password,
           user.password
@@ -64,37 +70,82 @@ export const authOptions: NextAuthOptions = {
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      authorization: {
+        params: {
+          prompt: "consent",
+          access_type: "offline",
+          response_type: "code"
+        }
+      }
     }),
     GitHubProvider({
       clientId: process.env.GITHUB_ID!,
       clientSecret: process.env.GITHUB_SECRET!,
+      authorization: {
+        params: {
+          scope: "read:user user:email"
+        }
+      }
     })
   ],
   callbacks: {
-    async session({ session, user, token }) {
-      // For database sessions, `user` parameter is available
-      if (session?.user) {
-        session.user.id = user?.id || token.id as string
-        session.user.role = (user as any)?.role || token.role as string
+    async signIn({ user, account, profile }) {
+      // Handle OAuth sign in
+      if (account?.provider === "google" || account?.provider === "github") {
+        try {
+          // Check if user already exists
+          const existingUser = await prisma.user.findUnique({
+            where: { email: user.email! }
+          })
+
+          if (!existingUser) {
+            // Create new user for OAuth
+            await prisma.user.create({
+              data: {
+                email: user.email!,
+                name: user.name,
+                image: user.image,
+                role: "USER",
+                emailVerified: new Date(),
+              }
+            })
+          }
+          return true
+        } catch (error) {
+          console.error("Error in OAuth sign in:", error)
+          return false
+        }
       }
-      return session
+      return true
     },
-    async jwt({ token, user }) {
+    async jwt({ token, user, account }) {
       if (user) {
         token.id = user.id
         token.role = (user as any).role
       }
+      
+      // Update token with OAuth provider info
+      if (account) {
+        token.accessToken = account.access_token
+        token.provider = account.provider
+      }
+      
       return token
+    },
+    async session({ session, token }) {
+      if (session?.user) {
+        session.user.id = token.id as string
+        session.user.role = token.role as string
+      }
+      return session
     }
   },
   pages: {
     signIn: "/login",
     error: "/login"
   },
-  // Remove the session strategy or set it to "database"
-  // This will store sessions in the database
   session: {
-    // strategy: "jwt", // Remove this line or change to "database"
+    strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   secret: process.env.NEXTAUTH_SECRET,
