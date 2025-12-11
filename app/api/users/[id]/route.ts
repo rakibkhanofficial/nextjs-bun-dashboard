@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import bcrypt from 'bcryptjs'
 import { getServerSession } from "next-auth/next"
-import { authOptions } from "@/app/api/auth/[...nextauth]/route"
+import { authOptions } from '@/lib/auth-options'
 
 interface RouteParams {
   params: {
@@ -43,15 +43,16 @@ export async function GET(
         image: true,
         createdAt: true,
         updatedAt: true,
+        role: true,
         // Include role details if exists
-        role: {
-          select: {
-            id: true,
-            name: true,
-            description: true,
-            permissions: true,
-          }
-        }
+        // role: {
+        //   select: {
+        //     id: true,
+        //     name: true,
+        //     description: true,
+        //     permissions: true,
+        //   }
+        // }
       }
     })
 
