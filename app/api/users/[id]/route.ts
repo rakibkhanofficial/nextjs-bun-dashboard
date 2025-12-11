@@ -39,9 +39,19 @@ export async function GET(
         id: true,
         name: true,
         email: true,
-        role: true,
+        emailVerified: true,
+        image: true,
         createdAt: true,
-        updatedAt: true
+        updatedAt: true,
+        // Include role details if exists
+        role: {
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            permissions: true,
+          }
+        }
       }
     })
 
@@ -87,16 +97,17 @@ export async function PUT(
     }
 
     const body = await request.json()
-    const { name, email, password, role } = body
+    const { name, email, password, role, status } = body
 
     // Build update data
     const updateData: any = {}
     
-    if (name) updateData.name = name
-    if (email) updateData.email = email
+    if (name !== undefined) updateData.name = name
+    if (email !== undefined) updateData.email = email
+    if (status !== undefined) updateData.status = status
     
     // Only admin can change role
-    if (role && session.user.role === "ADMIN") {
+    if (role !== undefined && session.user.role === "ADMIN") {
       updateData.role = role
     }
     
@@ -113,6 +124,7 @@ export async function PUT(
         name: true,
         email: true,
         role: true,
+        status: true,
         updatedAt: true
       }
     })
@@ -122,8 +134,17 @@ export async function PUT(
       user
     })
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error updating user:', error)
+    
+    // Handle duplicate email
+    if (error.code === 'P2002') {
+      return NextResponse.json(
+        { error: "Email already exists" },
+        { status: 409 }
+      )
+    }
+    
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

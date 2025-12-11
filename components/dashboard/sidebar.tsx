@@ -19,14 +19,23 @@ import {
   Bell,
   Search,
   Menu,
-  X
+  X,
+  LucideIcon
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { cn } from '@/lib/utils'
 
-const menuItems = [
+type menuItemTypes = {
+   title: string;
+    icon: LucideIcon;
+    href: string;
+    badge: string | null;
+    subItems?: undefined | { title: string; href: string }[];
+}
+
+const menuItems: menuItemTypes[] = [
   {
     title: 'Dashboard',
     icon: Home,

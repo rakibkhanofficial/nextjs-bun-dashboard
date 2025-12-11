@@ -8,20 +8,33 @@ datasource db {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String    @unique
-  password      String?
-  role          String    @default("USER")
-  emailVerified DateTime?
-  image         String?
-  resetToken    String?
+  id              String          @id @default(cuid())
+  name            String?
+  email           String          @unique
+  password        String?
+  role            String          @default("USER")
+  status          String          @default("active") // active, inactive, suspended
+  emailVerified   DateTime?
+  image           String?
+  resetToken      String?
   resetTokenExpiry DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
   
-  accounts      Account[]
-  sessions      Session[]
+  // Auth.js relations
+  accounts        Account[]
+  sessions        Session[]
+  
+  // New relationships for dashboard features
+  posts           Post[]
+  media           Media[]
+  invoices        Invoice[]
+  events          CalendarEvent[]
+  subscriptions   Subscription[]
+  userRole        Role?           @relation(fields: [roleId], references: [id])
+  roleId          String?
+  
+  @@map("users")
 }
 
 model Account {
@@ -41,6 +54,7 @@ model Account {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
+  @@map("accounts")
 }
 
 model Session {
@@ -49,6 +63,8 @@ model Session {
   userId       String
   expires      DateTime
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
 }
 
 model VerificationToken {
@@ -57,4 +73,207 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// Content Management Models
+model Post {
+  id          String    @id @default(cuid())
+  title       String
+  content     String?
+  excerpt     String?
+  slug        String    @unique
+  author      User      @relation(fields: [authorId], references: [id])
+  authorId    String
+  status      String    @default("draft") // draft, published, archived
+  featured    Boolean   @default(false)
+  category    String?
+  tags        String    // Store as comma-separated string for SQLite
+  views       Int       @default(0)
+  likes       Int       @default(0)
+  publishedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  @@map("posts")
+}
+
+model Page {
+  id          String    @id @default(cuid())
+  title       String
+  content     String?
+  slug        String    @unique
+  status      String    @default("draft")
+  order       Int       @default(0)
+  parentId    String?
+  isHome      Boolean   @default(false)
+  metaTitle   String?
+  metaDesc    String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  @@map("pages")
+}
+
+model Media {
+  id          String    @id @default(cuid())
+  filename    String
+  url         String
+  fileType    String    // image, video, document, etc.
+  fileSize    Int
+  dimensions  String?   // widthxheight for images
+  altText     String?
+  uploadedBy  User      @relation(fields: [uploadedById], references: [id])
+  uploadedById String
+  createdAt   DateTime  @default(now())
+  
+  @@map("media")
+}
+
+// Billing/Finance Models
+model Invoice {
+  id          String    @id @default(cuid())
+  invoiceNo   String    @unique
+  customer    User      @relation(fields: [customerId], references: [id])
+  customerId  String
+  amount      Float
+  tax         Float     @default(0)
+  total       Float
+  status      String    @default("pending") // pending, paid, cancelled, overdue
+  dueDate     DateTime
+  paidDate    DateTime?
+  items       String    // Store as JSON string for SQLite
+  notes       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  @@map("invoices")
+}
+
+model Subscription {
+  id          String    @id @default(cuid())
+  user        User      @relation(fields: [userId], references: [id])
+  userId      String
+  plan        String    // basic, pro, enterprise
+  status      String    @default("active") // active, cancelled, expired
+  price       Float
+  currency    String    @default("USD")
+  interval    String    @default("monthly") // monthly, yearly
+  currentPeriodStart DateTime
+  currentPeriodEnd   DateTime
+  cancelAtPeriodEnd Boolean @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  @@map("subscriptions")
+}
+
+// Calendar/Events Models
+model CalendarEvent {
+  id          String    @id @default(cuid())
+  title       String
+  description String?
+  startDate   DateTime
+  endDate     DateTime
+  allDay      Boolean   @default(false)
+  location    String?
+  color       String    @default("#3b82f6")
+  createdBy   User      @relation(fields: [createdById], references: [id])
+  createdById String
+  attendees   String    // Store as comma-separated string for SQLite
+  reminders   String    // Store as JSON string for SQLite
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  @@map("calendar_events")
+}
+
+// Role and Permission Models
+model Role {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  description String?
+  permissions String    // Store as comma-separated string for SQLite
+  users       User[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  @@map("roles")
+}
+
+model Permission {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  description String?
+  module      String    // users, posts, billing, etc.
+  action      String    // create, read, update, delete
+  createdAt   DateTime  @default(now())
+  
+  @@map("permissions")
+}
+
+// Analytics/Statistics Models
+model Analytics {
+  id          String    @id @default(cuid())
+  date        DateTime
+  pageViews   Int       @default(0)
+  uniqueVisitors Int    @default(0)
+  bounceRate  Float     @default(0)
+  avgSessionDuration Int @default(0)
+  source      String?   // direct, organic, social, referral
+  device      String?   // desktop, mobile, tablet
+  country     String?
+  createdAt   DateTime  @default(now())
+  
+  @@unique([date, source, device])
+  @@map("analytics")
+}
+
+// Notification Models
+model Notification {
+  id          String    @id @default(cuid())
+  userId      String
+  title       String
+  message     String
+  type        String    @default("info") // info, success, warning, error
+  read        Boolean   @default(false)
+  actionUrl   String?
+  metadata    String?   // Store as JSON string for SQLite
+  createdAt   DateTime  @default(now())
+  readAt      DateTime?
+  
+  @@index([userId, read])
+  @@map("notifications")
+}
+
+// Settings/Configuration Models
+model Setting {
+  id          String    @id @default(cuid())
+  key         String    @unique
+  value       String
+  type        String    @default("string") // string, number, boolean, json
+  category    String    @default("general")
+  description String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  @@map("settings")
+}
+
+// Audit Log Model
+model AuditLog {
+  id          String    @id @default(cuid())
+  userId      String?
+  userEmail   String?
+  action      String    // created, updated, deleted, logged_in, etc.
+  entityType  String    // User, Post, Invoice, etc.
+  entityId    String?
+  oldValue    String?   // Store as JSON string for SQLite
+  newValue    String?   // Store as JSON string for SQLite
+  ipAddress   String?
+  userAgent   String?
+  timestamp   DateTime  @default(now())
+  
+  @@index([userId, action, timestamp])
+  @@map("audit_logs")
 }
