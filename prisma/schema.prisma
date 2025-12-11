@@ -5,7 +5,6 @@ generator client {
 datasource db {
   provider = "postgresql"  // Changed from sqlite
   url      = env("DATABASE_URL")
-  relationMode = "prisma"  // Important for Prisma Data Platform
 }
 
 model User {
@@ -44,12 +43,12 @@ model Account {
   type              String
   provider          String
   providerAccountId String
-  refresh_token     String?  @db.Text  // Use Text for PostgreSQL
-  access_token      String?  @db.Text
+  refresh_token     String?  @db.Text  // PostgreSQL requires @db.Text for long strings
+  access_token      String?  @db.Text  // PostgreSQL requires @db.Text for long strings
   expires_at        Int?
   token_type        String?
   scope             String?
-  id_token          String?  @db.Text
+  id_token          String?  @db.Text  // PostgreSQL requires @db.Text for long strings
   session_state     String?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -81,7 +80,7 @@ model VerificationToken {
 model Post {
   id          String    @id @default(cuid())
   title       String
-  content     String?   @db.Text  // Use Text for longer content
+  content     String?   @db.Text  // Use @db.Text for longer content
   excerpt     String?   @db.Text
   slug        String    @unique
   author      User      @relation(fields: [authorId], references: [id])
@@ -89,7 +88,7 @@ model Post {
   status      String    @default("draft") // draft, published, archived
   featured    Boolean   @default(false)
   category    String?
-  tags        String[]  // Changed to array for PostgreSQL
+  tags        String[]  // PostgreSQL supports arrays
   views       Int       @default(0)
   likes       Int       @default(0)
   publishedAt DateTime?
@@ -143,7 +142,7 @@ model Invoice {
   status      String    @default("pending") // pending, paid, cancelled, overdue
   dueDate     DateTime
   paidDate    DateTime?
-  items       Json?     // Changed to Json type for PostgreSQL
+  items       Json?     // PostgreSQL supports Json type
   notes       String?   @db.Text
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
@@ -181,8 +180,8 @@ model CalendarEvent {
   color       String    @default("#3b82f6")
   createdBy   User      @relation(fields: [createdById], references: [id])
   createdById String
-  attendees   String[]  // Changed to array for PostgreSQL
-  reminders   Json?     // Changed to Json type for PostgreSQL
+  attendees   String[]  // PostgreSQL supports arrays
+  reminders   Json?     // PostgreSQL supports Json type
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   
@@ -194,7 +193,7 @@ model Role {
   id          String    @id @default(cuid())
   name        String    @unique
   description String?   @db.Text
-  permissions String[]  // Changed to array for PostgreSQL
+  permissions String[]  // PostgreSQL supports arrays
   users       User[]
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
@@ -239,7 +238,7 @@ model Notification {
   type        String    @default("info") // info, success, warning, error
   read        Boolean   @default(false)
   actionUrl   String?
-  metadata    Json?     // Changed to Json type for PostgreSQL
+  metadata    Json?     // PostgreSQL supports Json type
   createdAt   DateTime  @default(now())
   readAt      DateTime?
   
@@ -269,8 +268,8 @@ model AuditLog {
   action      String    // created, updated, deleted, logged_in, etc.
   entityType  String    // User, Post, Invoice, etc.
   entityId    String?
-  oldValue    Json?     // Changed to Json type for PostgreSQL
-  newValue    Json?     // Changed to Json type for PostgreSQL
+  oldValue    Json?     // PostgreSQL supports Json type
+  newValue    Json?     // PostgreSQL supports Json type
   ipAddress   String?
   userAgent   String?   @db.Text
   timestamp   DateTime  @default(now())
