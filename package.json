@@ -10,6 +10,7 @@
     "lint": "next lint",
     "prisma:push": "prisma db push",
     "prisma:studio": "prisma studio",
+    "seed": "bun run prisma:seed",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
