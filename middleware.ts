@@ -3,12 +3,26 @@ import { NextResponse } from "next/server"
 
 export default withAuth(
   function middleware(req) {
-    // Add your middleware logic here
     return NextResponse.next()
   },
   {
     callbacks: {
-      authorized: ({ token }) => !!token,
+      authorized: ({ req, token }) => {
+        const { pathname } = req.nextUrl
+        
+        // Allow registration (POST to /api/users) without authentication
+        if (pathname === '/api/users' && req.method === 'POST') {
+          return true // Allow registration without auth
+        }
+        
+        // Allow public API routes
+        if (pathname.startsWith('/api/auth/')) {
+          return true
+        }
+        
+        // For all other protected routes, require authentication
+        return !!token
+      },
     },
     pages: {
       signIn: "/login",
